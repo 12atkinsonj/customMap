@@ -397,10 +397,30 @@ if __name__ == "__main__":
     collector.verbose = True
     collector.roads = ['motorway','trunk','primary','secondary','tertiary','unclassified','residential','service','motorway_link','trunk_link','primary_link','secondary_link','service']
 
-    files = ['pennsylvania-latest.osm.pbf']
+    input_file = 'pennsylvania-latest.osm.pbf'
+
+    f = open('output.msgpack','wb')
 
     def output(collection):
-        sys.stdout.buffer.write(msgpack.packb(collection, use_bin_type=True))
+        f.write(msgpack.packb(collection, use_bin_type=True))
     # start parsing
-    for file in files:
-        collector.parse(file, output)
+    collector.parse(input_file, output)
+
+    f.close()
+
+    """
+     bin/curvature-collect -v --highway_types 'motorway,trunk,primary,secondary,tertiary,unclassified,residential,service,motorway_link,trunk_link,primary_link,secondary_link,service' vermont-latest.osm.pbf \
+    | bin/curvature-collect  $verbose $input_file \
+    | bin/curvature-pp filter_out_ways_with_tag --tag surface --values 'unpaved,dirt,gravel,fine_gravel,sand,grass,ground,pebblestone,mud,clay,dirt/sand,soil' \
+    | bin/curvature-pp filter_out_ways_with_tag --tag service --values 'driveway,parking_aisle,drive-through,parking,bus,emergency_access' \
+    | bin/curvature-pp add_segments \
+    | bin/curvature-pp add_segment_length_and_radius \
+    | bin/curvature-pp add_segment_curvature \
+    | bin/curvature-pp filter_segment_deflections \
+    | bin/curvature-pp split_collections_on_straight_segments --length 2414 \
+    | bin/curvature-pp roll_up_length \
+    | bin/curvature-pp roll_up_curvature \
+    | bin/curvature-pp filter_collections_by_curvature --min 300 \
+    | bin/curvature-pp sort_collections_by_sum --key curvature --direction DESC \
+    > vermont.msgpack
+    """
