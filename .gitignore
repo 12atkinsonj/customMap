@@ -1,2 +1,6 @@
-*.pbf
 .venv
+__pycache__
+
+*.pbf
+*.kml
+*.msgpack
