@@ -12,9 +12,9 @@ if __name__ == "__main__":
         # Instantiate our collector
         collector = WayCollector()
         collector.verbose = True
-        collector.roads = ['motorway','trunk','primary','secondary','tertiary','unclassified','residential','service','motorway_link','trunk_link','primary_link','secondary_link','service']
+        collector.roads = ['motorway','trunk','primary','secondary','tertiary','unclassified','residential','motorway_link','trunk_link','primary_link','secondary_link']
 
-        input_file = 'pennsylvania-latest.osm.pbf'
+        input_files = ['pennsylvania-latest.osm.pbf','new-jersey-latest.osm.pbf']
 
         ## READ the file and build the initial colleciton
 
@@ -24,7 +24,8 @@ if __name__ == "__main__":
         def output(collection):
             collections.append(collection)
         # start parsing
-        collector.parse(input_file, output)
+        for input_file in input_files:
+            collector.parse(input_file, output)
 
 
         with open('data.msgpack', 'wb') as f:
@@ -35,51 +36,68 @@ if __name__ == "__main__":
             collections = msgpack.unpackb(byte_data, strict_map_key=False)
 
     from curvature.post_processors.filter_out_ways_with_tag import FilterOutWaysWithTag
-    surface_filter = FilterOutWaysWithTag()
-    surface_filter.tag = 'surface'
-    surface_filter.values = 'unpaved,compacted,dirt,gravel,fine_gravel,sand,grass,ground,pebblestone,mud,clay,dirt/sand,soil'.split(',')
-    surface_filter.filter_out_ways_missing_tag = False
-
-    service_filter = FilterOutWaysWithTag()
-    service_filter.tag = 'service'
-    service_filter.values = 'driveway,parking_aisle,drive-through,parking,bus,emergency_access,alley'.split(',')
-    service_filter.filter_out_ways_missing_tag = False
-
-    area_filter = FilterOutWaysWithTag()
-    area_filter.tag = 'area'
-    area_filter.values = ['yes']
-    area_filter.filter_out_ways_missing_tag = False
+    surface_filter = FilterOutWaysWithTag(tag='surface', values='unpaved,compacted,dirt,gravel,fine_gravel,sand,grass,ground,pebblestone,mud,clay,dirt/sand,soil'.split(','))
+    service_filter = FilterOutWaysWithTag(tag='service', values='driveway,parking_aisle,drive-through,parking,bus,emergency_access,alley'.split(','))
+    area_filter = FilterOutWaysWithTag(tag='area', values=['yes'])
+    golf_filter = FilterOutWaysWithTag(tag='golf', values=['cartpath'])
+    access_filter = FilterOutWaysWithTag(tag='access', values=['no'])
+    vehicle_filter = FilterOutWaysWithTag(tag='vehicle', values=['no'])
+    motor_vehicle_filter = FilterOutWaysWithTag(tag='motor_vehicle', values=['no'])
 
     collections = surface_filter.process(collections)
     collections = service_filter.process(collections)
     collections = area_filter.process(collections)
+    collections = golf_filter.process(collections)
+    collections = access_filter.process(collections)
+    collections = vehicle_filter.process(collections)
+    collections = motor_vehicle_filter.process(collections)
 
     from curvature.post_processors.add_segments import AddSegments
     from curvature.post_processors.add_segment_length_and_radius import AddSegmentLengthAndRadius
     from curvature.post_processors.add_segment_curvature import AddSegmentCurvature
+    from curvature.post_processors.filter_segment_deflections import FilterSegmentDeflections
 
     add_segments = AddSegments()
     add_segment_len = AddSegmentLengthAndRadius()
     add_segment_curve = AddSegmentCurvature()
+    filter_deflections = FilterSegmentDeflections()
 
     collections = add_segments.process(collections)
     collections = add_segment_len.process(collections)
     collections = add_segment_curve.process(collections)
+    collections = filter_deflections.process(collections)
 
+    from curvature.post_processors.split_collections_on_straight_segments import SplitCollectionsOnStraightSegments
+    split_straights = SplitCollectionsOnStraightSegments(straight_segment_split_threshold=1800)
+    collections = split_straights.process(collections)
 
     from curvature.post_processors.roll_up_length import RollUpLength
     from curvature.post_processors.roll_up_curvature import RollUpCurvature
+    from curvature.post_processors.normalize_curvature_by_length import NormalizeCurvatureByLength
 
     roll_up_len = RollUpLength()
     roll_up_curvature = RollUpCurvature()
+    length_norm = NormalizeCurvatureByLength()
 
     collections = roll_up_len.process(collections)
     collections = roll_up_curvature.process(collections)
+    collections = length_norm.process(collections)
 
+    from curvature.post_processors.filter_collections_by_speed import FilterCollectionsBySpeed
+    speed_filter = FilterCollectionsBySpeed(min=0)
+    collections = speed_filter.process(collections)
 
     from curvature.post_processors.filter_collections_by_curvature import FilterCollectionsByCurvature
-    filter_curves = FilterCollectionsByCurvature(min=1600)
+    filter_curves = FilterCollectionsByCurvature(min=600)
     collections = filter_curves.process(collections)
+
+    from curvature.post_processors.filter_collections_by_ratio import FilterCollectionsByRatio
+    filter_curves = FilterCollectionsByRatio(min=.2)
+    collections = filter_curves.process(collections)
+
+    from curvature.post_processors.filter_collections_by_length import FilterCollectionsByLength
+    filter_length = FilterCollectionsByLength(min=1610)
+    collections = filter_length.process(collections)
 
     from curvature.post_processors.sort_collections_by_sum import SortCollectionsBySum
     sorter = SortCollectionsBySum(key='curvature', reverse=True)
@@ -111,35 +129,3 @@ if __name__ == "__main__":
 
     kml.foot(output_file)
     output_file.close()
-    """
- $script_path/curvature-collect --highway_types 'motorway,trunk,primary,secondary,tertiary,unclassified,residential,service,motorway_link,trunk_link,primary_link,secondary_link,service' $verbose $input_file \
-      | $script_path/curvature-pp filter_out_ways_with_tag --tag surface --values 'unpaved,compacted,dirt,gravel,fine_gravel,sand,grass,ground,pebblestone,mud,clay,dirt/sand,soil' \
-      | $script_path/curvature-pp filter_out_ways_with_tag --tag service --values 'driveway,parking_aisle,drive-through,parking,bus,emergency_access,alley' \
-      | $script_path/curvature-pp filter_out_ways_with_tag --tag area --values 'yes' \
-      | $script_path/curvature-pp filter_out_ways_with_tag --tag golf --values 'cartpath' \
-      | $script_path/curvature-pp filter_out_ways_with_tag --tag access --values 'no' \
-      | $script_path/curvature-pp filter_out_ways_with_tag --tag vehicle --values 'no' \
-      | $script_path/curvature-pp filter_out_ways_with_tag --tag motor_vehicle --values 'no' \
-      | $script_path/curvature-pp filter_out_ways --match 'And(TagEmpty("name"), TagEmpty("ref"), TagEquals("highway", "residential"), TagEquals("tiger:reviewed", "no"))' \
-      | $script_path/curvature-pp filter_out_ways --match 'And(TagEquals("highway", "raceway"), TagEquals("sport", "motocross"))' \
-      | $script_path/curvature-pp filter_out_ways --match 'And(TagEquals("highway", "service"), Or(TagEquals("access", "private"), TagEquals("motor_vehicle", "private"), TagEquals("vehicle", "private")))' \
-      | $script_path/curvature-pp add_segments \
-      | $script_path/curvature-pp add_segment_length_and_radius \
-      | $script_path/curvature-pp add_segment_curvature \
-      | $script_path/curvature-pp filter_segment_deflections \
-      | $script_path/curvature-pp squash_curvature_for_tagged_ways --tag junction --values 'roundabout,circular' \
-      | $script_path/curvature-pp squash_curvature_for_tagged_ways --tag traffic_calming \
-      | $script_path/curvature-pp squash_curvature_for_ways --match 'TagAndValueRegex("^parking:lane:(both|left|right)", "parallel|diagonal|perpendicular|marked")' \
-      | $script_path/curvature-pp squash_curvature_for_ways --match 'TagAndValueRegex("^parking:lane:(both|left|right):(parallel|diagonal|perpendicular)", "^(on_street|on_kerb|half_on_kerb|painted_area_only)$")' \
-      | $script_path/curvature-pp squash_curvature_near_way_tag_change --tag junction --only-values 'roundabout,circular' --distance 30 \
-      | $script_path/curvature-pp squash_curvature_near_way_tag_change --tag oneway --ignored-values 'no' --distance 30 \
-      | $script_path/curvature-pp squash_curvature_near_tagged_nodes --tag highway --values 'stop,give_way,traffic_signals,crossing,mini_roundabout,traffic_calming' --distance 30 \
-      | $script_path/curvature-pp squash_curvature_near_tagged_nodes --tag traffic_calming --distance 30 \
-      | $script_path/curvature-pp squash_curvature_near_tagged_nodes --tag barrier --distance 30 \
-      | $script_path/curvature-pp split_collections_on_straight_segments --length 2414 \
-      | $script_path/curvature-pp roll_up_length \
-      | $script_path/curvature-pp roll_up_curvature \
-      | $script_path/curvature-pp filter_collections_by_curvature --min 300 \
-      | $script_path/curvature-pp sort_collections_by_sum --key curvature --direction DESC \
-      > $temp_dir/$filename.msgpack
-    """
