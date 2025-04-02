@@ -365,11 +365,12 @@ class SingleColorKmlOutput(KmlOutput):
     min_curvature = 0
     max_curvature = 4000
 
-    def __init__(self, units, min_curvature, max_curvature, assumed_paved_highways=None, paved_surfaces=None):
+    def __init__(self, units, min_curvature, max_curvature, assumed_paved_highways=None, paved_surfaces=None, name='Roads'):
         super(SingleColorKmlOutput, self).__init__(units)
         self.tools = OutputTools(units, assumed_paved_highways, paved_surfaces)
         self.min_curvature = min_curvature
         self.max_curvature = max_curvature
+        self.name = name
 
     def head(self, f):
         super(SingleColorKmlOutput, self).head(f)
@@ -383,7 +384,7 @@ class SingleColorKmlOutput(KmlOutput):
         f.write('	<visibility>1</visibility>\n')
         f.write('</ScreenOverlay>\n')
         f.write('<Folder>\n')
-        f.write('	<name>Roads</name>\n')
+        f.write(f'	<name>{self.name}</name>\n')
 
     def foot(self, f):
         f.write('</Folder>\n')

@@ -13,6 +13,7 @@ class NormalizeCurvatureByLength(object):
                 ratio = 0
             else:
                 ratio = collection['curvature']/collection['length']
-                collection['ratio'] = ratio
+            
+            collection['ratio'] = ratio
                 
             yield(collection)

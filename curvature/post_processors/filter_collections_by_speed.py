@@ -9,6 +9,15 @@ def extract_speed(speedLimit):
         speed = 0
     return speed
 
+speed_lookup = {
+    'motorway':55,
+    'trunk':55,
+    'primary':45,
+    'secondary':35,
+    'tertiary':30,
+    'residential':25
+}
+
 class FilterCollectionsBySpeed(object):
     def __init__(self, min=None, max=None, avg=None):
         self.min = min
@@ -23,9 +32,18 @@ class FilterCollectionsBySpeed(object):
             for way in collection['ways']:
                 # Use an already-summed length value if it exists on the way.
                 if 'maxspeed' in way['tags']:
-                    maxspeed = max(extract_speed(way['tags']['maxspeed']), maxspeed)
-                    minspeed = min(extract_speed(way['tags']['maxspeed']), minspeed)
-                    speeds.append(extract_speed(way['tags']['maxspeed']))
+                    way_speed = extract_speed(way['tags']['maxspeed'])
+                
+                elif 'highway' in way['tags']:
+                    road_type = way['tags']['highway']
+                    way_speed = speed_lookup.get(road_type, 0)
+                
+                else:
+                    way_speed = 0
+
+                maxspeed = max(way_speed, maxspeed)
+                minspeed = min(way_speed, minspeed)
+                speeds.append(way_speed)
 
             #if there were no speeds provided, set the min to 0
             if minspeed == 999:
