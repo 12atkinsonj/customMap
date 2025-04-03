@@ -10,6 +10,7 @@ def processRoads(config = {}, from_scratch=False):
     curve_ratio_min = config['curve_ratio_min']
     total_length_min = config['total_length_min']
     curve_ratio_or = config['curve_ratio_or']
+    top_n = config['top_n']
     
     if from_scratch:
         # Instantiate our collector
@@ -96,7 +97,7 @@ def processRoads(config = {}, from_scratch=False):
     collections = length_norm.process(collections)
 
     from curvature.post_processors.filter_collections_by_speed import FilterCollectionsBySpeed
-    speed_filter = FilterCollectionsBySpeed(min=speed_min)
+    speed_filter = FilterCollectionsBySpeed(avg=speed_min)
     collections = speed_filter.process(collections)
 
 
@@ -118,17 +119,26 @@ def processRoads(config = {}, from_scratch=False):
     filter_length = FilterCollectionsByLength(min=total_length_min)
     collections = filter_length.process(collections)
 
+    from curvature.post_processors.filter_collections_by_location import FilterCollectionsByLocation
+    location_filter = FilterCollectionsByLocation(lat=40.081738, long=-75.579575, radius = 100000)
+    collections = location_filter.process(collections)
+
     from curvature.post_processors.sort_collections_by_sum import SortCollectionsBySum
-    sorter = SortCollectionsBySum(key='ratio', reverse=True)
+    sorter = SortCollectionsBySum(key='curvature', reverse=True)
     collections = sorter.process(collections)
 
 
+    from curvature.post_processors.head import Head
+    top_n_filter = Head(top_n)
+    collections = top_n_filter.process(collections)
+
+    
     ## Write the file to .kmz
     from curvature.output import SingleColorKmlOutput
 
     units = 'mi'
-    min_curvature = 800
-    max_curvature = 6000
+    min_curvature = 300
+    max_curvature = 5000
     assumed_paved_highways = 'motorway,motorway_link,trunk,trunk_link,primary,primary_link,secondary,secondary_link'
     paved_surfaces = 'paved,asphalt,concrete,concrete:lanes,concrete:plates,metal,wood,cobblestone'
     
@@ -138,7 +148,7 @@ def processRoads(config = {}, from_scratch=False):
         max_curvature=max_curvature, 
         assumed_paved_highways=assumed_paved_highways,
         paved_surfaces=paved_surfaces,
-        name=file_name.strip('.kml')
+        name=file_name[:-4]
     )
 
 

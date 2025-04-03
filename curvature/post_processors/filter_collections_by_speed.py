@@ -27,6 +27,7 @@ class FilterCollectionsBySpeed(object):
     def process(self, iterable):
         for collection in iterable:
             speeds = []
+            lengths = []
             maxspeed = 0
             minspeed = 999
             for way in collection['ways']:
@@ -44,13 +45,18 @@ class FilterCollectionsBySpeed(object):
                 maxspeed = max(way_speed, maxspeed)
                 minspeed = min(way_speed, minspeed)
                 speeds.append(way_speed)
+                lengths.append(way['length'])
 
             #if there were no speeds provided, set the min to 0
             if minspeed == 999:
                 minspeed = 0
 
             if speeds:
-                avgspeed = round(sum(speeds)/len(speeds),2)
+                weighted_speed = 0
+                for s, l in zip (speeds, lengths):
+                    weighted_speed += s*l
+                
+                avgspeed = round(weighted_speed/sum(lengths),2)
             else:
                 avgspeed = 0
 
