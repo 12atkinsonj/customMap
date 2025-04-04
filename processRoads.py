@@ -1,4 +1,5 @@
 import msgpack
+from pathlib import Path
 from collector import WayCollector
 
 def processRoads(config = {}, from_scratch=False):
@@ -11,6 +12,9 @@ def processRoads(config = {}, from_scratch=False):
     total_length_min = config['total_length_min']
     curve_ratio_or = config['curve_ratio_or']
     top_n = config['top_n']
+    center_lat = config['center_lat']
+    center_long = config['center_long']
+    loc_radius = config['loc_radius']
     
     if from_scratch:
         # Instantiate our collector
@@ -18,15 +22,14 @@ def processRoads(config = {}, from_scratch=False):
         collector.verbose = True
         collector.roads = ['motorway','trunk','primary','secondary','tertiary','unclassified','residential','motorway_link','trunk_link','primary_link','secondary_link']
 
-        input_files = ['pennsylvania-latest.osm.pbf','new-jersey-latest.osm.pbf']
-
-        ## READ the file and build the initial colleciton
+        ## READ the file and build the initial colleciton       
         collections = []
         def output(collection):
             collections.append(collection)
+
         # start parsing
-        for input_file in input_files:
-            collector.parse(input_file, output)
+        for input_file in Path('osmData').glob('*.pbf'):
+            collector.parse(str(input_file), output)
 
         with open('data.msgpack', 'wb') as f:
             msgpack.pack(collections, f, use_bin_type=True)
@@ -120,8 +123,9 @@ def processRoads(config = {}, from_scratch=False):
     collections = filter_length.process(collections)
 
     from curvature.post_processors.filter_collections_by_location import FilterCollectionsByLocation
-    location_filter = FilterCollectionsByLocation(lat=40.081738, long=-75.579575, radius = 100000)
+    location_filter = FilterCollectionsByLocation(lat=center_lat, long=center_long, radius=loc_radius)
     collections = location_filter.process(collections)
+
 
     from curvature.post_processors.sort_collections_by_sum import SortCollectionsBySum
     sorter = SortCollectionsBySum(key='curvature', reverse=True)
