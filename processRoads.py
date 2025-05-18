@@ -1,7 +1,7 @@
 import msgpack
 from pathlib import Path
 from collector import WayCollector
-
+from itertools import chain
 def processRoads(config = {}, from_scratch=False):
 
     file_name = config['file_name']
@@ -24,12 +24,9 @@ def processRoads(config = {}, from_scratch=False):
 
         ## READ the file and build the initial colleciton       
         collections = []
-        def output(collection):
-            collections.append(collection)
-
         # start parsing
         for input_file in Path('osmData').glob('*.pbf'):
-            collector.parse(str(input_file), output)
+            collections.append(collector.parse(str(input_file)))
 
         with open('data.msgpack', 'wb') as f:
             msgpack.pack(collections, f, use_bin_type=True)
@@ -47,6 +44,7 @@ def processRoads(config = {}, from_scratch=False):
     vehicle_filter = FilterOutWaysWithTag(tag='vehicle', values=['no'])
     motor_vehicle_filter = FilterOutWaysWithTag(tag='motor_vehicle', values=['no'])
 
+    collections = chain(collections)
     collections = surface_filter.process(collections)
     collections = service_filter.process(collections)
     collections = area_filter.process(collections)

@@ -63,7 +63,7 @@ class WayCollector(osmium.SimpleHandler):
                 if not (i % collections_marker):
                     sys.stderr.write('.')
                     sys.stderr.flush()
-            callback(collection)
+            yield collection
         self.log('\nStreaming completed in {time:.1f}'.format(time=(time.time() - start_time)))
 
     # Save tagged nodes save the full details for later adding to ways.
