@@ -27,7 +27,7 @@ class WayCollector(osmium.SimpleHandler):
             # sys.stderr.write("{}\t{mem:.1f}MB\n".format(msg, mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1048576))
             sys.stderr.flush()
 
-    def parse(self, filename, callback):
+    def parse(self, filename):
         # Reinitialize if we have a new file
         self.collections = []
         self.coords = {}

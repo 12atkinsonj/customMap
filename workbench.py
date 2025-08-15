@@ -1,23 +1,13 @@
+from collector import WayCollector
+from pathlib import Path
+import msgpack
 
+collector = WayCollector()
+collector.verbose = True
+collector.roads = ['motorway','trunk','primary','secondary','tertiary','unclassified','residential','motorway_link','trunk_link','primary_link','secondary_link']
 
-class CustomIter:
-    def __init__(self):
-        self.stop = False
-        self.index = 0
+for input_file in Path('osmData').glob('*.pbf'):
+    collection = list(collector.parse(str(input_file)))
 
-    def __iter__(self):
-        return self
-    
-    def __next__(self):
-        if self.stop:
-            raise StopIteration
-        
-        if self.index > 10:
-            raise StopIteration
-        
-        self.index += 1
-        return self.index
-    
-for i in CustomIter():
-    print(i)
-        
+    with open(Path('msgPackFiles',f'{input_file.name}.msgpack'), 'wb') as f:
+        msgpack.pack(collection, f, use_bin_type=True)

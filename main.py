@@ -45,7 +45,7 @@ configs.append({
 #     'loc_radius': 130000,
 #     })
 
-from_scratch = False
+from_scratch = True
 for config in configs:
     print(f"Processing: {config['file_name']} ...")
     processRoads(config, from_scratch=from_scratch)

@@ -2,6 +2,18 @@ import msgpack
 from pathlib import Path
 from collector import WayCollector
 from itertools import chain
+
+def collectionGenerator():
+    for collection_file in Path('msgPackFiles').glob('*.msgpack'):
+        print(f"Processing {collection_file.name}")
+        with open(collection_file, "rb") as f:
+            byte_data = f.read()
+            collections = msgpack.unpackb(byte_data, strict_map_key=False)
+            for collection in collections:
+                yield collection
+            del collections
+
+
 def processRoads(config = {}, from_scratch=False):
 
     file_name = config['file_name']
@@ -16,24 +28,8 @@ def processRoads(config = {}, from_scratch=False):
     center_long = config['center_long']
     loc_radius = config['loc_radius']
     
-    if from_scratch:
-        # Instantiate our collector
-        collector = WayCollector()
-        collector.verbose = True
-        collector.roads = ['motorway','trunk','primary','secondary','tertiary','unclassified','residential','motorway_link','trunk_link','primary_link','secondary_link']
-
-        ## READ the file and build the initial colleciton       
-        collections = []
-        # start parsing
-        for input_file in Path('osmData').glob('*.pbf'):
-            collections.append(collector.parse(str(input_file)))
-
-        with open('data.msgpack', 'wb') as f:
-            msgpack.pack(collections, f, use_bin_type=True)
-    else:
-        with open("data.msgpack", "rb") as f:
-            byte_data = f.read()
-            collections = msgpack.unpackb(byte_data, strict_map_key=False)
+       
+    collections = collectionGenerator()
 
     from curvature.post_processors.filter_out_ways_with_tag import FilterOutWaysWithTag
     surface_filter = FilterOutWaysWithTag(tag='surface', values='unpaved,compacted,dirt,gravel,fine_gravel,sand,grass,ground,pebblestone,mud,clay,dirt/sand,soil'.split(','))
@@ -44,7 +40,7 @@ def processRoads(config = {}, from_scratch=False):
     vehicle_filter = FilterOutWaysWithTag(tag='vehicle', values=['no'])
     motor_vehicle_filter = FilterOutWaysWithTag(tag='motor_vehicle', values=['no'])
 
-    collections = chain(collections)
+    # collections = chain(*collections)
     collections = surface_filter.process(collections)
     collections = service_filter.process(collections)
     collections = area_filter.process(collections)
@@ -120,19 +116,19 @@ def processRoads(config = {}, from_scratch=False):
     filter_length = FilterCollectionsByLength(min=total_length_min)
     collections = filter_length.process(collections)
 
-    from curvature.post_processors.filter_collections_by_location import FilterCollectionsByLocation
-    location_filter = FilterCollectionsByLocation(lat=center_lat, long=center_long, radius=loc_radius)
-    collections = location_filter.process(collections)
+    # from curvature.post_processors.filter_collections_by_location import FilterCollectionsByLocation
+    # location_filter = FilterCollectionsByLocation(lat=center_lat, long=center_long, radius=loc_radius)
+    # collections = location_filter.process(collections)
 
 
-    from curvature.post_processors.sort_collections_by_sum import SortCollectionsBySum
-    sorter = SortCollectionsBySum(key='curvature', reverse=True)
-    collections = sorter.process(collections)
+    # from curvature.post_processors.sort_collections_by_sum import SortCollectionsBySum
+    # sorter = SortCollectionsBySum(key='curvature', reverse=True)
+    # collections = sorter.process(collections)
 
 
-    from curvature.post_processors.head import Head
-    top_n_filter = Head(top_n)
-    collections = top_n_filter.process(collections)
+    # from curvature.post_processors.head import Head
+    # top_n_filter = Head(top_n)
+    # collections = top_n_filter.process(collections)
 
     
     ## Write the file to .kmz

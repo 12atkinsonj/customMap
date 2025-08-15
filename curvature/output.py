@@ -182,13 +182,13 @@ class OutputTools(object):
         else:
             ref = None
         if names and ref:
-            return '{} ({})'.format(names[0], ref)
+            return '{} ({})'.format(names[0], ref).encode("charmap", errors="replace").decode('charmap')
         elif ref:
-            return '{}'.format(ref)
+            return '{}'.format(ref).encode("charmap", errors="replace").decode('charmap')
         elif names:
-            return '{}'.format(names[0])
+            return '{}'.format(names[0]).encode("charmap", errors="replace").decode('charmap')
         else:
-            return '{}'.format(collection['ways'][0]['id'])
+            return '{}'.format(collection['ways'][0]['id']).encode("charmap", errors="replace").decode('charmap')
 
     def get_collection_description(self, collection):
         curvature = self.get_collection_curvature(collection)
