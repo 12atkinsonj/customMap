@@ -5,6 +5,15 @@ from itertools import chain
 
 def collectionGenerator():
     for collection_file in Path('msgPackFiles').glob('*.msgpack'):
+        
+        if collection_file.name not in (
+            'pennsylvania-latest.osm.pbf.msgpack',
+            'new-jersey-latest.osm.pbf.msgpack',
+            'delaware-latest.osm.pbf.msgpack',
+            'maryland-latest.osm.pbf.msgpack',
+            ):
+            continue
+
         print(f"Processing {collection_file.name}")
         with open(collection_file, "rb") as f:
             byte_data = f.read()
@@ -27,9 +36,13 @@ def processRoads(config = {}, from_scratch=False):
     center_lat = config['center_lat']
     center_long = config['center_long']
     loc_radius = config['loc_radius']
-    
+    poly = config.get('polygon_filter',None)
        
     collections = collectionGenerator()
+    
+    from curvature.post_processors.filter_collections_by_polygon import FilterCollectionsByPolygon
+    polygon_filter = FilterCollectionsByPolygon(polygon=poly)
+    collections = polygon_filter.process(collections)
 
     from curvature.post_processors.filter_out_ways_with_tag import FilterOutWaysWithTag
     surface_filter = FilterOutWaysWithTag(tag='surface', values='unpaved,compacted,dirt,gravel,fine_gravel,sand,grass,ground,pebblestone,mud,clay,dirt/sand,soil'.split(','))
@@ -112,6 +125,8 @@ def processRoads(config = {}, from_scratch=False):
         collections = filter_curves.process(collections)
         collections = filter_ratio.process(collections)
 
+    collections = polygon_filter.process(collections)
+
     from curvature.post_processors.filter_collections_by_length import FilterCollectionsByLength
     filter_length = FilterCollectionsByLength(min=total_length_min)
     collections = filter_length.process(collections)
@@ -120,15 +135,14 @@ def processRoads(config = {}, from_scratch=False):
     # location_filter = FilterCollectionsByLocation(lat=center_lat, long=center_long, radius=loc_radius)
     # collections = location_filter.process(collections)
 
+    from curvature.post_processors.sort_collections_by_sum import SortCollectionsBySum
+    sorter = SortCollectionsBySum(key='curvature', reverse=True)
+    collections = sorter.process(collections)
 
-    # from curvature.post_processors.sort_collections_by_sum import SortCollectionsBySum
-    # sorter = SortCollectionsBySum(key='curvature', reverse=True)
-    # collections = sorter.process(collections)
 
-
-    # from curvature.post_processors.head import Head
-    # top_n_filter = Head(top_n)
-    # collections = top_n_filter.process(collections)
+    from curvature.post_processors.head import Head
+    top_n_filter = Head(top_n)
+    collections = top_n_filter.process(collections)
 
     
     ## Write the file to .kmz

@@ -263,7 +263,7 @@ class OutputTools(object):
 
 class KmlOutput(object):
     no_compress = False
-    description = "Curvature data is a derivative of Open Street Map which is © OpenStreetMap contributors and provided under the terms of the Open Data Commons Open Database License (ODbL). https://www.openstreetmap.org/about"
+    description = "Curvature data is a derivative of Open Street Map which is OpenStreetMap contributors and provided under the terms of the Open Data Commons Open Database License (ODbL). https://www.openstreetmap.org/about"
 
     def __init__(self, units):
         self.tools = OutputTools(units)
