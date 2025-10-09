@@ -1,8 +1,8 @@
 from processRoads import processRoads
 import re
 
-def getPolygon():
-    with open ('polygonFilter', 'r') as f:
+def getPolygon(fileName):
+    with open (fileName, 'r') as f:
         s = str(f.read())
     coords = re.search('<coordinates>([0-9 \\t\\n.\-,.]*)<',s).group(1)
     coords = re.sub('[\\t\\n]','',coords)
@@ -19,22 +19,77 @@ def getPolygon():
 
 configs = []
 
-configs.append({
-    'file_name':'CurvyRoads.kml',
-    'split_straight_len':1610, #1 mile
+configs.append(
+    # {
+    # 'file_name':'SouthEastPA.kml',
+    # 'msg_pack_filters':['pennsylvania'],
+    # 'split_straight_len':1610, #1 mile
+    # 'speed_min':30,
+    # 'total_curve_min':1200,
+    # 'curve_ratio_min':0.22,
+    # 'curve_ratio_or': True,
+    # 'total_length_min':1610, #1 mile
+    # 'top_n':3000,
+    # 'polygon_filter': getPolygon('southEastPA')
+    # },
+    #    {
+    # 'file_name':'Maryland.kml',
+    # 'msg_pack_filters':['maryland'],
+    # 'split_straight_len':1610, #1 mile
+    # 'speed_min':30,
+    # 'total_curve_min':1200,
+    # 'curve_ratio_min':0.22,
+    # 'curve_ratio_or': True,
+    # 'total_length_min':1610, #1 mile
+    # 'top_n':3000,
+    # },
+    #        {
+    # 'file_name':'New Jersey.kml',
+    # 'msg_pack_filters':['new-jersey'],
+    # 'split_straight_len':1610, #1 mile
+    # 'speed_min':30,
+    # 'total_curve_min':1200,
+    # 'curve_ratio_min':0.22,
+    # 'curve_ratio_or': True,
+    # 'total_length_min':1610, #1 mile
+    # 'top_n':3000,
+    # },
+    # {
+    # 'file_name':'Maine.kml',
+    # 'msg_pack_filters':['maine'],
+    # 'split_straight_len':1610, #1 mile
+    # 'speed_min':30,
+    # 'total_curve_min':1200,
+    # 'curve_ratio_min':0.22,
+    # 'curve_ratio_or': True,
+    # 'total_length_min':1610, #1 mile
+    # 'top_n':3000,
+    # },
+    # {
+    # 'file_name':'Delaware.kml',
+    # 'msg_pack_filters':['delaware'],
+    # 'split_straight_len':1610, #1 mile
+    # 'speed_min':30,
+    # 'total_curve_min':700,
+    # 'curve_ratio_min':0.22,
+    # 'curve_ratio_or': True,
+    # 'total_length_min':1610, #1 mile
+    # 'top_n':3000,
+    # },
+
+    {
+    'file_name':'experimental.kml',
+    'msg_pack_filters':['pennsylvania'],
+    'split_straight_len':800, #1 mile
     'speed_min':30,
-    'total_curve_min':1200,
+    'total_curve_min':500,
     'curve_ratio_min':0.22,
     'curve_ratio_or': True,
     'total_length_min':1610, #1 mile
-    'top_n':2000,
-    'center_lat': 39.815556, 
-    'center_long': -74.823611,
-    # 'center_lat': 39.4538888889, 
-    # 'center_long': -76.9577777778,
-    'loc_radius': 130000,
-    'polygon_filter': getPolygon()
-    })
+    'top_n':3000,
+    'polygon_filter': getPolygon('southEastPA')
+    },
+    )
 
 
 

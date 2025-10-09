@@ -3,17 +3,10 @@ from pathlib import Path
 from collector import WayCollector
 from itertools import chain
 
-def collectionGenerator():
+def collectionGenerator(filters):
     for collection_file in Path('msgPackFiles').glob('*.msgpack'):
-        
-        if collection_file.name not in (
-            'pennsylvania-latest.osm.pbf.msgpack',
-            'new-jersey-latest.osm.pbf.msgpack',
-            'delaware-latest.osm.pbf.msgpack',
-            'maryland-latest.osm.pbf.msgpack',
-            ):
+        if not any([f in collection_file.name for f in filters]) and filters:
             continue
-
         print(f"Processing {collection_file.name}")
         with open(collection_file, "rb") as f:
             byte_data = f.read()
@@ -26,6 +19,7 @@ def collectionGenerator():
 def processRoads(config = {}, from_scratch=False):
 
     file_name = config['file_name']
+    msg_pack_filters = config.get('msg_pack_filters',[])
     split_straight_len = config['split_straight_len']
     speed_min = config['speed_min']
     total_curve_min = config['total_curve_min']
@@ -33,16 +27,17 @@ def processRoads(config = {}, from_scratch=False):
     total_length_min = config['total_length_min']
     curve_ratio_or = config['curve_ratio_or']
     top_n = config['top_n']
-    center_lat = config['center_lat']
-    center_long = config['center_long']
-    loc_radius = config['loc_radius']
+    center_lat = config.get('center_lat',None)
+    center_long = config.get('center_long',None)
+    loc_radius = config.get('loc_radius',None)
     poly = config.get('polygon_filter',None)
        
-    collections = collectionGenerator()
+    collections = collectionGenerator(msg_pack_filters)
     
     from curvature.post_processors.filter_collections_by_polygon import FilterCollectionsByPolygon
-    polygon_filter = FilterCollectionsByPolygon(polygon=poly)
-    collections = polygon_filter.process(collections)
+    if poly:
+        polygon_filter = FilterCollectionsByPolygon(polygon=poly)
+        collections = polygon_filter.process(collections)
 
     from curvature.post_processors.filter_out_ways_with_tag import FilterOutWaysWithTag
     surface_filter = FilterOutWaysWithTag(tag='surface', values='unpaved,compacted,dirt,gravel,fine_gravel,sand,grass,ground,pebblestone,mud,clay,dirt/sand,soil'.split(','))
@@ -86,7 +81,7 @@ def processRoads(config = {}, from_scratch=False):
     squash_tagged_ways = SquashCurvatureForTaggedWays(tag='junction', values=['roundabout', 'circular'])
     squash_change_tagged_ways = SquashCurvatureNearWayTagChange(tag='junction', distance=30, only_values=['roundabout', 'circular'])
     
-    collections = squash_curves.process(collections)
+    # collections = squash_curves.process(collections)
     collections = squash_tagged_ways.process(collections)
     collections = squash_change_tagged_ways.process(collections)
 
@@ -125,7 +120,8 @@ def processRoads(config = {}, from_scratch=False):
         collections = filter_curves.process(collections)
         collections = filter_ratio.process(collections)
 
-    collections = polygon_filter.process(collections)
+    if poly:
+        collections = polygon_filter.process(collections)
 
     from curvature.post_processors.filter_collections_by_length import FilterCollectionsByLength
     filter_length = FilterCollectionsByLength(min=total_length_min)
