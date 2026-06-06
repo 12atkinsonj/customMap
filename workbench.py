@@ -1,13 +1,21 @@
-from collector import WayCollector
-from pathlib import Path
-import msgpack
+with open ('polygonFilter', 'r') as f:
+    s = str(f.read())
 
-collector = WayCollector()
-collector.verbose = True
-collector.roads = ['motorway','trunk','primary','secondary','tertiary','unclassified','residential','motorway_link','trunk_link','primary_link','secondary_link']
+print(s)
 
-for input_file in Path('osmData').glob('*.pbf'):
-    collection = list(collector.parse(str(input_file)))
+import re
 
-    with open(Path('msgPackFiles',f'{input_file.name}.msgpack'), 'wb') as f:
-        msgpack.pack(collection, f, use_bin_type=True)
+coords = re.search('<coordinates>([0-9 \\t\\n.\-,.]*)<',s).group(1)
+coords = re.sub('[\\t\\n]','',coords)
+coords = coords.strip()
+
+coords = coords.split(' ')
+print(coords)
+output = []
+for coord in coords:
+    tmp = coord.split(',')[:2]
+    print(tmp)
+    tmpc = (tmp[0], tmp[1])
+    output.append(tmpc)
+
+print(output)
